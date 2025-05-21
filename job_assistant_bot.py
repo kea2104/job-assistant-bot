@@ -2,33 +2,48 @@ import logging
 from telegram import Update
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 import schedule
-import asyncio
+import time
+import threading
 
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     level=logging.INFO
 )
 
-TOKEN = 'сюда вставь свой токен'
+TOKEN = "7560560212:AAE4e4J1J867tlasOBx7Ovv3faKtK5sDS_nU"  # Твой токен
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("Привет! Я помогу тебе с удалённой работой.")
+    await update.message.reply_text("Привет! Я бот-помощник по поиску удалённой работы.")
 
 async def jobs(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("Вот вакансии на сегодня (заглушка).")
+    await update.message.reply_text("Здесь будет список актуальных вакансий (пока заглушка).")
 
-async def send_daily_message(app):
+def run_schedule(app):
+    async def job_task():
+        chat_id = "377810740"  # Твой chat_id
+        await app.bot.send_message(chat_id=chat_id, text="Доброе утро! Вот новые вакансии на сегодня (заглушка).")
+
+    schedule.every().day.at("09:00").do(lambda: app.create_task(job_task()))
+
     while True:
         schedule.run_pending()
-        await asyncio.sleep(60)
+        time.sleep(60)
 
-def job_task():
-    app.bot.send_message(chat_id='сюда chat_id', text="Доброе утро! Вот новые вакансии на сегодня (заглушка).")
+if __name__ == '__main__':
+    app = ApplicationBuilder().token(TOKEN).build()
+    
+    app.add_handler(CommandHandler("start", start))
+    app.add_handler(CommandHandler("jobs", jobs))
 
-app = ApplicationBuilder().token(TOKEN).build()
-app.add_handler(CommandHandler("start", start))
-app.add_handler(CommandHandler("jobs", jobs))
+    async def main():
+        await app.initialize()
+        # Запускаем планировщик в отдельном потоке
+        scheduler_thread = threading.Thread(target=run_schedule, args=(app,), daemon=True)
+        scheduler_thread.start()
 
-schedule.every().day.at("09:00").do(job_task)
+        await app.start()
+        await app.updater.start_polling()
+        await app.updater.idle()
 
-app.run_polling()
+    import asyncio
+    asyncio.run(main())
